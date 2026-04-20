@@ -182,7 +182,7 @@
         }
 
         // ==========================================
-        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL
+        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL (COM TENTATIVAS MÚLTIPLAS)
         // ==========================================
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -197,7 +197,7 @@
             document.getElementById('textoPecas').value = "";
 
             try {
-                // 1. LER O ARQUIVO PDF
+                // 1. Extrair texto do PDF
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 let extractedText = "";
@@ -210,10 +210,10 @@
                 }
 
                 if (extractedText.trim().length === 0) {
-                    throw new Error("O PDF não contém texto selecionável (parece ser uma imagem).");
+                    throw new Error("O PDF não contém texto lido (parece ser uma imagem).");
                 }
 
-                // 2. ENVIAR PARA A INTELIGÊNCIA ARTIFICIAL
+                // 2. Chamar IA
                 const apiKey = getApiKey();
 
                 if (apiKey && apiKey.length > 20) {
@@ -225,7 +225,7 @@
                     statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
                 } else {
                     document.getElementById('textoPecas').value = extractedText;
-                    statusLabel.innerText = "⚠️ Chave de API não configurada. Revise os dados brutos abaixo.";
+                    statusLabel.innerText = "⚠️ Chave de API ausente. Revise os dados brutos abaixo.";
                     statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block";
                     document.getElementById('apiConfigPanel').classList.remove('hidden');
                 }
@@ -235,13 +235,15 @@
                 statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
             } finally {
                 aiLoading.classList.add('hidden');
-                event.target.value = ''; // Limpa o input file
+                event.target.value = ''; // Limpa o input para poder tentar novamente
             }
         }
 
         async function chamarInteligenciaArtificial(textoBruto, apiKey) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-            
+            // Tenta do mais novo para o mais antigo, garantindo que não trave
+            const modelosParaTentar = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
+            let erroFinal = "";
+
             const prompt = `
                 Analise o seguinte texto bruto extraído de um relatório de projeto em PDF. 
                 Sua única tarefa é encontrar as medidas das peças a serem cortadas (Largura, Altura e Quantidade). 
@@ -254,37 +256,45 @@
                 ${textoBruto}
             `;
 
-            const response = await fetch(url, {
+            const configFetch = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.1 }
                 })
-            });
+            };
 
-            if (!response.ok) {
-                const erro = await response.json();
-                throw new Error(erro.error?.message || "O Google recusou a conexão.");
+            for (let modelo of modelosParaTentar) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+                
+                try {
+                    const response = await fetch(url, configFetch);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.candidates && data.candidates.length > 0) {
+                            let resultText = data.candidates[0].content.parts[0].text;
+                            
+                            // Caça o JSON na resposta
+                            const jsonStart = resultText.indexOf('[');
+                            const jsonEnd = resultText.lastIndexOf(']');
+                            
+                            if (jsonStart !== -1 && jsonEnd !== -1) {
+                                resultText = resultText.substring(jsonStart, jsonEnd + 1);
+                                return JSON.parse(resultText);
+                            }
+                        }
+                    } else {
+                        const err = await response.json();
+                        erroFinal = err.error?.message || "Erro na API.";
+                    }
+                } catch (e) {
+                    erroFinal = e.message;
+                }
             }
-
-            const data = await response.json();
-            if (!data.candidates || data.candidates.length === 0) {
-                 throw new Error("A IA não retornou nenhum dado.");
-            }
-
-            let resultText = data.candidates[0].content.parts[0].text;
             
-            // FILTRO DE SEGURANÇA: Caça o JSON mesmo se a IA falar textos no meio
-            const jsonStart = resultText.indexOf('[');
-            const jsonEnd = resultText.lastIndexOf(']');
-            
-            if (jsonStart === -1 || jsonEnd === -1) {
-                throw new Error("A IA não conseguiu organizar os dados em tabela.");
-            }
-
-            resultText = resultText.substring(jsonStart, jsonEnd + 1);
-            return JSON.parse(resultText);
+            throw new Error(`Servidor recusou a chave. Último erro: ${erroFinal}`);
         }
 
         // ==========================================
