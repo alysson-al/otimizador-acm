@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otimizador de Corte IA - ACM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        .canvas-container { overflow-x: auto; white-space: nowrap; padding-bottom: 1rem; }
+        canvas { border: 2px solid #4a5568; margin-right: 1rem; background-color: #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            .no-print { display: none !important; }
+            #painelResultados { display: block !important; margin-top: 0; }
+            .canvas-container { overflow: visible; white-space: normal; display: flex; flex-wrap: wrap; }
+            canvas { page-break-inside: avoid; margin-bottom: 20px; }
+            .print-header { display: block !important; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 24px; }
+        }
+        .print-header { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 p-6 font-sans text-gray-800">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 no-print flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte (Com IA)</h1>
+                <p class="text-gray-600">Otimização inteligente com seleção multichapas e leitura de projetos via IA.</p>
+            </div>
+            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Chave de API
+            </button>
+        </header>
+
+        <div id="apiConfigPanel" class="hidden bg-gray-800 text-white p-4 rounded-lg mb-6 shadow-md no-print">
+            <h3 class="text-sm font-bold mb-2 text-blue-300">Configuração de Segurança: Chave do Google Gemini</h3>
+            <p class="text-xs text-gray-400 mb-3">Sua chave não será enviada ao servidor. Ela ficará salva apenas no seu navegador local.</p>
+            <div class="flex gap-2">
+                <input type="password" id="apiKeyInput" placeholder="Cole sua chave de API aqui..." class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                <button onclick="salvarApiKey()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-bold transition">Salvar Chave</button>
+            </div>
+            <p id="apiSaveStatus" class="text-xs text-green-400 mt-2 hidden">✅ Chave salva com sucesso no seu navegador!</p>
+        </div>
+
+        <div class="print-header">Relatório de Plano de Corte - ACM</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+            <div class="bg-white p-6 rounded-lg shadow-md col-span-1">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Chapas Disponíveis (mm)</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-700 w-6">1:</span>
+                        <input type="number" id="chapaW1" value="1220" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                        <span class="text-gray-500">x</span>
+                        <input type="number" id="chapaH1" value="2440" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-700 w-6">2:</span>
+                        <input type="number" id="chapaW2" value="1500" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                        <span class="text-gray-500">x</span>
+                        <input type="number" id="chapaH2" value="5000" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-700 w-6">3:</span>
+                        <input type="number" id="chapaW3" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                        <span class="text-gray-500">x</span>
+                        <input type="number" id="chapaH3" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                    </div>
+
+                    <div class="border-t pt-3 mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Desconto Lateral / Refile (mm)</label>
+                        <input type="number" id="descLat" value="10" class="w-full border rounded p-2 mt-1">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mt-2">Espessura da Lâmina / Fresa (mm)</label>
+                        <input type="number" id="espSerra" value="4" class="w-full border rounded p-2 mt-1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md col-span-1 md:col-span-2">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Leitura de Peças</h2>
+                
+                <div class="mb-4 p-4 bg-gray-50 border rounded-lg border-blue-200 shadow-inner">
+                    <label class="block text-sm font-bold text-blue-900 mb-2">📄 Importar PDF do Projeto (Leitura via IA)</label>
+                    <input type="file" id="pdfInput" accept="application/pdf" onchange="lerPDF(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                    
+                    <div id="aiLoading" class="hidden mt-3 flex items-center text-blue-600 text-sm font-semibold">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        A IA está analisando a tabela do PDF...
+                    </div>
+                    <p id="pdfStatus" class="text-sm mt-2 font-semibold hidden"></p>
+                </div>
+
+                <label class="block text-sm font-bold text-gray-700 mb-2">Revisão de Peças (Largura x Altura Quantidade)</label>
+                <textarea id="textoPecas" rows="5" class="w-full border border-gray-300 rounded p-3 font-mono text-sm mb-4" placeholder="Os dados extraídos aparecerão aqui."></textarea>
+                
+                <button onclick="processarOtimizacao()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md">
+                    Calcular Otimização Inteligente
+                </button>
+
+                <div id="loadingContainer" class="hidden mt-4">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium text-blue-700">Calculando arranjo...</span>
+                        <span class="text-sm font-medium text-blue-700" id="progressText">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="painelResultados" class="hidden mt-8">
+            <div class="flex justify-between items-center mb-4 no-print">
+                <h2 class="text-2xl font-bold text-gray-800">Resultados da Otimização</h2>
+                <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded flex items-center shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Imprimir Relatório
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2">
+                    <p class="text-sm text-blue-600 font-semibold mb-2">Resumo de Compra</p>
+                    <div id="resumoCompra" class="text-lg font-bold text-blue-900 leading-tight"></div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center flex flex-col justify-center">
+                    <p class="text-sm text-green-600 font-semibold">Aproveitamento</p>
+                    <p class="text-3xl font-bold text-green-900" id="resAprov">0%</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-center flex flex-col justify-center">
+                    <p class="text-sm text-red-600 font-semibold">Perda</p>
+                    <p class="text-3xl font-bold text-red-900" id="resPerda">0%</p>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-2">Mapas de Corte</h3>
+            <div id="canvasContainer" class="canvas-container flex pb-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // GERENCIAMENTO DA CHAVE API NO LOCALSTORAGE
+        // ==========================================
+        function toggleConfig() {
+            const panel = document.getElementById('apiConfigPanel');
+            panel.classList.toggle('hidden');
+        }
+
+        function salvarApiKey() {
+            const input = document.getElementById('apiKeyInput').value.trim();
+            if (input) {
+                localStorage.setItem('geminiApiKey', input);
+                document.getElementById('apiSaveStatus').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('apiConfigPanel').classList.add('hidden');
+                    document.getElementById('apiSaveStatus').classList.add('hidden');
+                }, 2000);
+            }
+        }
+
+        // Carrega a chave ao abrir a página (se já estiver salva)
+        window.onload = () => {
+            const savedKey = localStorage.getItem('geminiApiKey');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            } else {
+                // Se não tem chave, abre o painel para ele colar
+                document.getElementById('apiConfigPanel').classList.remove('hidden');
+            }
+        };
+
+        function getApiKey() {
+            return localStorage.getItem('geminiApiKey');
+        }
+
+        // ==========================================
+        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL
+        // ==========================================
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        async function lerPDF(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            
+            const statusLabel = document.getElementById('pdfStatus');
+            const aiLoading = document.getElementById('aiLoading');
+            statusLabel.classList.add('hidden');
+            aiLoading.classList.remove('hidden');
+            document.getElementById('textoPecas').value = "";
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let extractedText = "";
+
+                for(let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    const strings = content.items.map(item => item.str);
+                    extractedText += strings.join(" ") + "\n";
+                }
+
+                const apiKey = getApiKey();
+
+                if (apiKey && apiKey.length > 20) {
+                    const pecasProcessadas = await chamarInteligenciaArtificial(extractedText, apiKey);
+                    const textoFormatado = pecasProcessadas.map(p => `${p.w} x ${p.h} ${p.qtd}`).join("\n");
+                    
+                    document.getElementById('textoPecas').value = textoFormatado;
+                    statusLabel.innerText = "✅ Tabela extraída perfeitamente pela IA! Revise os dados abaixo.";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
+                } else {
+                    document.getElementById('textoPecas').value = extractedText;
+                    statusLabel.innerText = "⚠️ Chave de API não configurada. Texto extraído sem IA. Revise e limpe os dados abaixo.";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block";
+                    document.getElementById('apiConfigPanel').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+                statusLabel.innerText = "❌ Erro ao processar. Verifique a sua Chave de API.";
+                statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
+            } finally {
+                aiLoading.classList.add('hidden');
+            }
+        }
+
+        async function chamarInteligenciaArtificial(textoBruto, apiKey) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            const prompt = `
+                Atue como um extrator de dados de engenharia. 
+                Analise o seguinte texto bruto extraído de um relatório de projeto em PDF. 
+                Sua única tarefa é encontrar as medidas das peças a serem cortadas (Largura, Altura e Quantidade). 
+                Ignore cabeçalhos, nomes de materiais, logos, rodapés e texto não numérico.
+                
+                RETORNE ESTRITAMENTE UM ARRAY JSON VÁLIDO no formato:
+                [{"w": 1000, "h": 500, "qtd": 2}, {"w": 800, "h": 400, "qtd": 5}]
+                
+                Texto bruto:
+                ${textoBruto}
+            `;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.1 }
+                })
+            });
+
+            if (!response.ok) throw new Error("Falha na API");
+
+            const data = await response.json();
+            let resultText = data.candidates[0].content.parts[0].text;
+            resultText = resultText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            return JSON.parse(resultText);
+        }
+
+        // ==========================================
+        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS (Mantido o mesmo)
+        // ==========================================
+        class Packer {
+            constructor(w, h) { this.root = { x: 0, y: 0, w: w, h: h }; }
+            fit(blocks) {
+                let node;
+                for (let n = 0; n < blocks.length; n++) {
+                    let block = blocks[n];
+                    if (node = this.findNode(this.root, block.w, block.h)) {
+                        block.fit = this.splitNode(node, block.w, block.h);
+                    }
+                }
+            }
+            findNode(root, w, h) {
+                if (root.used) return this.findNode(root.right, w, h) || this.findNode(root.down, w, h);
+                else if ((w <= root.w) && (h <= root.h)) return root;
+                else return null;
+            }
+            splitNode(node, w, h) {
+                node.used = true;
+                node.down  = { x: node.x, y: node.y + h, w: node.w, h: node.h - h };
+                node.right = { x: node.x + w, y: node.y, w: node.w - w, h: h };
+                return node;
+            }
+        }
+
+        function extrairPecasDaCaixa(texto) {
+            const pecas = [];
+            const linhas = texto.split('\n');
+            const regex = /(\d+(?:[.,]\d+)?)\s*(?:x|-)?\s*(\d+(?:[.,]\d+)?)\s*(?:x|-)?\s*(\d+)/i;
+            linhas.forEach(linha => {
+                const match = linha.match(regex);
+                if (match) {
+                    pecas.push({ w: parseFloat(match[1].replace(',', '.')), h: parseFloat(match[2].replace(',', '.')), qtd: parseInt(match[3]) });
+                }
+            });
+            return pecas;
+        }
+
+        function getChapasDisponiveis(descLat) {
+            const chapas = [];
+            for (let i = 1; i <= 3; i++) {
+                let w = parseFloat(document.getElementById(`chapaW${i}`).value);
+                let h = parseFloat(document.getElementById(`chapaH${i}`).value);
+                if (w > 0 && h > 0) {
+                    chapas.push({ id_tipo: i, w_orig: w, h_orig: h, w_util: w - (descLat * 2), h_util: h - (descLat * 2), area_orig: w * h });
+                }
+            }
+            return chapas;
+        }
+
+        async function processarOtimizacao() {
+            const descLat = parseFloat(document.getElementById('descLat').value) || 0;
+            const serra = parseFloat(document.getElementById('espSerra').value) || 0;
+            const texto = document.getElementById('textoPecas').value;
+
+            if(!texto.trim()) { alert("Nenhuma peça para calcular."); return; }
+
+            const chapasDisp = getChapasDisponiveis(descLat);
+            if(chapasDisp.length === 0) { alert("Informe pelo menos um tamanho de chapa."); return; }
+
+            document.getElementById('painelResultados').classList.add('hidden');
+            const loadingContainer = document.getElementById('loadingContainer');
+            loadingContainer.classList.remove('hidden');
+
+            const pecasBrutas = extrairPecasDaCaixa(texto);
+            let blocks = [];
+            let idCounter = 0;
+            let areaPecasLimpa = 0;
+
+            pecasBrutas.forEach(p => {
+                for(let i=0; i < p.qtd; i++) {
+                    blocks.push({ id: idCounter++, w: p.w + serra, h: p.h + serra, w_real: p.w, h_real: p.h });
+                    areaPecasLimpa += (p.w * p.h);
+                }
+            });
+
+            blocks.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+
+            let chapasUsadas = [];
+            let blocksRestantes = [...blocks];
+            const totalPecas = blocks.length;
+            let pecasProcessadas = 0;
+
+            while(blocksRestantes.length > 0) {
+                let melhorAproveitamento = -1;
+                let chapaEscolhida = null;
+                let encaixeEscolhido = null;
+
+                for (let chapa of chapasDisp) {
+                    let packer = new Packer(chapa.w_util, chapa.h_util);
+                    let blocosTeste = blocksRestantes.map(b => ({...b})); 
+                    packer.fit(blocosTeste);
+                    let encaixados = blocosTeste.filter(b => b.fit);
+                    
+                    if (encaixados.length > 0) {
+                        let areaEncaixada = encaixados.reduce((sum, b) => sum + (b.w * b.h), 0);
+                        let areaUtilChapa = chapa.w_util * chapa.h_util;
+                        let taxaAprov = areaEncaixada / areaUtilChapa;
+
+                        if (encaixados.length === blocksRestantes.length) { taxaAprov += 1000 - (areaUtilChapa / 10000000); }
+
+                        if (taxaAprov > melhorAproveitamento) {
+                            melhorAproveitamento = taxaAprov;
+                            chapaEscolhida = chapa;
+                            encaixeEscolhido = encaixados;
+                        }
+                    }
+                }
+
+                if (!chapaEscolhida) {
+                    alert("Erro: Existe uma peça maior que a área útil de TODAS as chapas cadastradas!");
+                    loadingContainer.classList.add('hidden');
+                    return;
+                }
+
+                chapasUsadas.push({ chapa: chapaEscolhida, pecas: encaixeEscolhido });
+                pecasProcessadas += encaixeEscolhido.length;
+                
+                let idsEncaixados = encaixeEscolhido.map(b => b.id);
+                blocksRestantes = blocksRestantes.filter(b => !idsEncaixados.includes(b.id));
+
+                let porcentagem = Math.round((pecasProcessadas / totalPecas) * 100);
+                document.getElementById('progressBar').style.width = porcentagem + '%';
+                document.getElementById('progressText').innerText = porcentagem + '%';
+
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
+            let areaTotalComprada = 0;
+            let contagemChapas = {}; 
+
+            chapasUsadas.forEach(uso => {
+                areaTotalComprada += uso.chapa.area_orig;
+                let nomeChapa = `${uso.chapa.w_orig} x ${uso.chapa.h_orig}`;
+                contagemChapas[nomeChapa] = (contagemChapas[nomeChapa] || 0) + 1;
+            });
+
+            const aproveitamento = (areaPecasLimpa / areaTotalComprada) * 100;
+            const perda = 100 - aproveitamento;
+
+            let htmlResumo = "";
+            for (const [tamanho, qtd] of Object.entries(contagemChapas)) { htmlResumo += `<div><span class="text-blue-600">${qtd}x</span> chapa(s) de ${tamanho}mm</div>`; }
+
+            document.getElementById('painelResultados').classList.remove('hidden');
+            document.getElementById('resumoCompra').innerHTML = htmlResumo;
+            document.getElementById('resAprov').innerText = aproveitamento.toFixed(1) + "%";
+            document.getElementById('resPerda').innerText = perda.toFixed(1) + "%";
+
+            desenharChapas(chapasUsadas, descLat, serra);
+            setTimeout(() => { loadingContainer.classList.add('hidden'); }, 500);
+        }
+
+        function desenharChapas(chapasUsadas, margem, serra) {
+            const container = document.getElementById('canvasContainer');
+            container.innerHTML = ''; 
+            const escala = 0.2; 
+
+            chapasUsadas.forEach((uso, index) => {
+                const chapa = uso.chapa;
+                const pecas = uso.pecas;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = "inline-block flex-col text-center mr-6 mb-6";
+                
+                const label = document.createElement('p');
+                label.className = "text-sm font-bold mt-2 text-gray-800 bg-gray-200 rounded p-1";
+                label.innerText = `Chapa ${index + 1} (${chapa.w_orig}x${chapa.h_orig})`;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = chapa.w_orig * escala;
+                canvas.height = chapa.h_orig * escala;
+                const ctx = canvas.getContext('2d');
+
+                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(margem*escala, margem*escala, chapa.w_util*escala, chapa.h_util*escala);
+
+                pecas.forEach(p => {
+                    if(p.fit) {
+                        const x = (margem + p.fit.x) * escala;
+                        const y = (margem + p.fit.y) * escala;
+                        
+                        ctx.fillStyle = '#fbbf24'; ctx.fillRect(x, y, p.w * escala, p.h * escala);
+                        ctx.strokeStyle = '#d97706'; ctx.strokeRect(x, y, p.w * escala, p.h * escala);
+
+                        ctx.fillStyle = '#3b82f6'; ctx.fillRect(x, y, p.w_real * escala, p.h_real * escala);
+                        
+                        if (p.w_real * escala > 30 && p.h_real * escala > 15) {
+                            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px Arial'; ctx.fillText(`${p.w_real}x${p.h_real}`, x + 5, y + 15);
+                        }
+                    }
+                });
+
+                wrapper.appendChild(canvas);
+                wrapper.appendChild(label);
+                container.appendChild(wrapper);
+            });
+        }
+    </script>
+</body>
+</html>
