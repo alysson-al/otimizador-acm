@@ -168,13 +168,11 @@
             }
         }
 
-        // Carrega a chave ao abrir a página (se já estiver salva)
         window.onload = () => {
             const savedKey = localStorage.getItem('geminiApiKey');
             if (savedKey) {
                 document.getElementById('apiKeyInput').value = savedKey;
             } else {
-                // Se não tem chave, abre o painel para ele colar
                 document.getElementById('apiConfigPanel').classList.remove('hidden');
             }
         };
@@ -199,6 +197,7 @@
             document.getElementById('textoPecas').value = "";
 
             try {
+                // 1. LER O ARQUIVO PDF
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 let extractedText = "";
@@ -210,27 +209,33 @@
                     extractedText += strings.join(" ") + "\n";
                 }
 
+                if (extractedText.trim().length === 0) {
+                    throw new Error("O PDF não contém texto selecionável (parece ser uma imagem).");
+                }
+
+                // 2. ENVIAR PARA A INTELIGÊNCIA ARTIFICIAL
                 const apiKey = getApiKey();
 
                 if (apiKey && apiKey.length > 20) {
                     const pecasProcessadas = await chamarInteligenciaArtificial(extractedText, apiKey);
-                    const textoFormatado = pecasProcessadas.map(p => `${p.w} x ${p.h} ${p.qtd}`).join("\n");
+                    const textoFormatado = pecasProcessadas.map(p => `${p.w} x ${p.h} \t ${p.qtd}`).join("\n");
                     
                     document.getElementById('textoPecas').value = textoFormatado;
                     statusLabel.innerText = "✅ Tabela extraída perfeitamente pela IA! Revise os dados abaixo.";
                     statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
                 } else {
                     document.getElementById('textoPecas').value = extractedText;
-                    statusLabel.innerText = "⚠️ Chave de API não configurada. Texto extraído sem IA. Revise e limpe os dados abaixo.";
+                    statusLabel.innerText = "⚠️ Chave de API não configurada. Revise os dados brutos abaixo.";
                     statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block";
                     document.getElementById('apiConfigPanel').classList.remove('hidden');
                 }
             } catch (error) {
                 console.error(error);
-                statusLabel.innerText = "❌ Erro ao processar. Verifique a sua Chave de API.";
+                statusLabel.innerText = `❌ Falha: ${error.message}`;
                 statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
             } finally {
                 aiLoading.classList.add('hidden');
+                event.target.value = ''; // Limpa o input file
             }
         }
 
@@ -238,12 +243,11 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             
             const prompt = `
-                Atue como um extrator de dados de engenharia. 
                 Analise o seguinte texto bruto extraído de um relatório de projeto em PDF. 
                 Sua única tarefa é encontrar as medidas das peças a serem cortadas (Largura, Altura e Quantidade). 
-                Ignore cabeçalhos, nomes de materiais, logos, rodapés e texto não numérico.
+                Ignore cabeçalhos, logos, rodapés e texto não numérico.
                 
-                RETORNE ESTRITAMENTE UM ARRAY JSON VÁLIDO no formato:
+                RETORNE APENAS UM ARRAY JSON VÁLIDO. Não escreva mais nada. Formato esperado:
                 [{"w": 1000, "h": 500, "qtd": 2}, {"w": 800, "h": 400, "qtd": 5}]
                 
                 Texto bruto:
@@ -259,16 +263,32 @@
                 })
             });
 
-            if (!response.ok) throw new Error("Falha na API");
+            if (!response.ok) {
+                const erro = await response.json();
+                throw new Error(erro.error?.message || "O Google recusou a conexão.");
+            }
 
             const data = await response.json();
+            if (!data.candidates || data.candidates.length === 0) {
+                 throw new Error("A IA não retornou nenhum dado.");
+            }
+
             let resultText = data.candidates[0].content.parts[0].text;
-            resultText = resultText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            
+            // FILTRO DE SEGURANÇA: Caça o JSON mesmo se a IA falar textos no meio
+            const jsonStart = resultText.indexOf('[');
+            const jsonEnd = resultText.lastIndexOf(']');
+            
+            if (jsonStart === -1 || jsonEnd === -1) {
+                throw new Error("A IA não conseguiu organizar os dados em tabela.");
+            }
+
+            resultText = resultText.substring(jsonStart, jsonEnd + 1);
             return JSON.parse(resultText);
         }
 
         // ==========================================
-        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS (Mantido o mesmo)
+        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS
         // ==========================================
         class Packer {
             constructor(w, h) { this.root = { x: 0, y: 0, w: w, h: h }; }
