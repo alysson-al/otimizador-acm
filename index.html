@@ -9,7 +9,6 @@
     <style>
         .canvas-container { overflow-x: auto; white-space: nowrap; padding-bottom: 1rem; }
         canvas { border: 2px solid #4a5568; margin-right: 1rem; background-color: #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
             .no-print { display: none !important; }
@@ -26,23 +25,23 @@
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 no-print flex justify-between items-end">
             <div>
-                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte (Com IA)</h1>
+                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte <span class="text-blue-500 text-xl">v4.0 (Gemini 2.5)</span></h1>
                 <p class="text-gray-600">Otimização inteligente com seleção multichapas e leitura de projetos via IA.</p>
             </div>
-            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Chave de API
+            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center bg-gray-200 px-3 py-2 rounded font-bold">
+                🔑 Configurar API (Google AI)
             </button>
         </header>
 
-        <div id="apiConfigPanel" class="hidden bg-gray-800 text-white p-4 rounded-lg mb-6 shadow-md no-print">
-            <h3 class="text-sm font-bold mb-2 text-blue-300">Configuração de Segurança: Chave do Google Gemini</h3>
-            <p class="text-xs text-gray-400 mb-3">Sua chave não será enviada ao servidor. Ela ficará salva apenas no seu navegador local.</p>
+        <div id="apiConfigPanel" class="hidden bg-gray-800 text-white p-6 rounded-lg mb-6 shadow-xl no-print border-l-4 border-blue-500">
+            <h3 class="text-lg font-bold mb-2 text-blue-300">Conexão com a Inteligência Artificial</h3>
+            <p class="text-sm text-gray-300 mb-4">Insira a sua chave API. O sistema está configurado para utilizar o Gemini 2.5 Flash.</p>
             <div class="flex gap-2">
-                <input type="password" id="apiKeyInput" placeholder="Cole sua chave de API aqui..." class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                <button onclick="salvarApiKey()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-bold transition">Salvar Chave</button>
+                <input type="password" id="apiKeyInput" placeholder="Cole sua chave AIzaSy..." class="w-full bg-gray-700 border border-gray-600 rounded p-3 text-sm text-white focus:outline-none focus:border-blue-400">
+                <button onclick="testarChave()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">1. Testar Conexão</button>
+                <button onclick="salvarApiKey()" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">2. Salvar Chave</button>
             </div>
-            <p id="apiSaveStatus" class="text-xs text-green-400 mt-2 hidden">✅ Chave salva com sucesso no seu navegador!</p>
+            <div id="apiSaveStatus" class="text-sm mt-3 hidden font-bold"></div>
         </div>
 
         <div class="print-header">Relatório de Plano de Corte - ACM</div>
@@ -94,7 +93,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        A IA está analisando a tabela do PDF... (Pode levar alguns segundos)
+                        A IA está analisando a tabela...
                     </div>
                     <p id="pdfStatus" class="text-sm mt-2 font-semibold hidden"></p>
                 </div>
@@ -141,30 +140,67 @@
                     <p class="text-3xl font-bold text-red-900" id="resPerda">0%</p>
                 </div>
             </div>
-
             <h3 class="text-lg font-semibold mb-2">Mapas de Corte</h3>
             <div id="canvasContainer" class="canvas-container flex pb-4"></div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // GERENCIAMENTO DA CHAVE API NO LOCALSTORAGE
-        // ==========================================
+        // GERENCIAMENTO E TESTE DA CHAVE API
         function toggleConfig() {
             const panel = document.getElementById('apiConfigPanel');
             panel.classList.toggle('hidden');
+        }
+
+        async function testarChave() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            const status = document.getElementById('apiSaveStatus');
+            
+            if(!key) {
+                status.innerText = "❌ Cole a chave no campo acima primeiro.";
+                status.className = "text-sm text-red-400 mt-3 block font-bold";
+                status.classList.remove('hidden');
+                return;
+            }
+
+            status.innerText = "⏳ Testando conexão com os servidores do Google...";
+            status.className = "text-sm text-yellow-400 mt-3 block font-bold";
+            status.classList.remove('hidden');
+
+            try {
+                // Atualizado para o modelo 2.5 flash com base no painel do usuário
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Responda apenas com a palavra OK" }] }] })
+                });
+
+                if(response.ok) {
+                    status.innerText = "✅ SUCESSO! A chave é válida e a IA 2.5 Flash está respondendo. Pode clicar em Salvar!";
+                    status.className = "text-sm text-green-400 mt-3 block font-bold";
+                } else {
+                    const err = await response.json();
+                    status.innerText = `❌ ERRO: O Google bloqueou a chave. Detalhe: ${err.error?.message || "Chave Inválida"}`;
+                    status.className = "text-sm text-red-400 mt-3 block font-bold";
+                }
+            } catch(e) {
+                status.innerText = `❌ ERRO DE REDE: ${e.message}`;
+                status.className = "text-sm text-red-400 mt-3 block font-bold";
+            }
         }
 
         function salvarApiKey() {
             const input = document.getElementById('apiKeyInput').value.trim();
             if (input) {
                 localStorage.setItem('geminiApiKey', input);
-                document.getElementById('apiSaveStatus').classList.remove('hidden');
+                const status = document.getElementById('apiSaveStatus');
+                status.innerText = "✅ Chave salva e trancada no seu navegador!";
+                status.className = "text-sm text-green-400 mt-3 block font-bold";
+                status.classList.remove('hidden');
+                
                 setTimeout(() => {
                     document.getElementById('apiConfigPanel').classList.add('hidden');
-                    document.getElementById('apiSaveStatus').classList.add('hidden');
-                }, 2000);
+                }, 2500);
             }
         }
 
@@ -181,9 +217,7 @@
             return localStorage.getItem('geminiApiKey');
         }
 
-        // ==========================================
-        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL (SISTEMA DE CASCATA)
-        // ==========================================
+        // LÓGICA DE PDF E IA
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         async function lerPDF(event) {
@@ -197,7 +231,6 @@
             document.getElementById('textoPecas').value = "";
 
             try {
-                // 1. Extrair texto do PDF
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 let extractedText = "";
@@ -210,10 +243,9 @@
                 }
 
                 if (extractedText.trim().length === 0) {
-                    throw new Error("O PDF não contém texto lido (parece ser uma imagem ou arquivo bloqueado).");
+                    throw new Error("O PDF não contém texto lido (pode ser uma imagem).");
                 }
 
-                // 2. Chamar IA
                 const apiKey = getApiKey();
 
                 if (apiKey && apiKey.length > 20) {
@@ -221,7 +253,7 @@
                     const textoFormatado = pecasProcessadas.map(p => `${p.w} x ${p.h} \t ${p.qtd}`).join("\n");
                     
                     document.getElementById('textoPecas').value = textoFormatado;
-                    statusLabel.innerText = "✅ Tabela extraída perfeitamente pela IA! Revise os dados abaixo.";
+                    statusLabel.innerText = "✅ Tabela extraída pela IA! Revise os dados abaixo.";
                     statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
                 } else {
                     document.getElementById('textoPecas').value = extractedText;
@@ -231,83 +263,54 @@
                 }
             } catch (error) {
                 console.error(error);
-                statusLabel.innerText = `❌ Erro da IA: ${error.message}`;
+                statusLabel.innerText = `❌ Falha: ${error.message}`;
                 statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
             } finally {
                 aiLoading.classList.add('hidden');
-                event.target.value = ''; // Limpa o input para poder tentar o mesmo arquivo novamente
+                event.target.value = ''; 
             }
         }
 
         async function chamarInteligenciaArtificial(textoBruto, apiKey) {
-            // SISTEMA DE CASCATA: Tenta os modelos do mais atual para o mais antigo e universal
-            const modelos = [
-                { nome: 'gemini-1.5-flash', usarJsonMode: true },
-                { nome: 'gemini-1.5-pro', usarJsonMode: true },
-                { nome: 'gemini-pro', usarJsonMode: false }
-            ];
-
-            let ultimoErro = "";
-
-            const prompt = `Extraia as peças que precisam ser cortadas deste texto bruto de um PDF.
-            Ignore cabeçalhos, logos, e texto que não seja as medidas da peça.
-            Retorne um array JSON com objetos contendo estritamente: "w" (largura em número), "h" (altura em número), e "qtd" (quantidade em número). Exemplo: [{"w": 1000, "h": 500, "qtd": 2}]
-            Não escreva NENHUM texto extra. Apenas o array JSON.
+            // Atualizado para usar exclusivamente o Gemini 2.5 Flash
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            
+            const prompt = `Extraia as peças de corte deste texto.
+            Retorne APENAS um array JSON válido. 
+            Formato OBRIGATÓRIO: [{"w": 1000, "h": 500, "qtd": 2}]
             
             Texto bruto:
             ${textoBruto}`;
 
-            for (let modelo of modelos) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo.nome}:generateContent?key=${apiKey}`;
-                
-                let generationConfig = { temperature: 0.1 };
-                if (modelo.usarJsonMode) {
-                    generationConfig.responseMimeType = "application/json";
-                }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.1 }
+                })
+            });
 
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: generationConfig
-                        })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        let textoResposta = data.candidates[0].content.parts[0].text;
-                        
-                        // LIMPEZA FORÇADA: Pega apenas o que está entre os colchetes do JSON
-                        const jsonStart = textoResposta.indexOf('[');
-                        const jsonEnd = textoResposta.lastIndexOf(']');
-                        
-                        if (jsonStart !== -1 && jsonEnd !== -1) {
-                            textoResposta = textoResposta.substring(jsonStart, jsonEnd + 1);
-                            return JSON.parse(textoResposta);
-                        } else {
-                            throw new Error("A IA não retornou um formato JSON válido.");
-                        }
-                    } else {
-                        const erroObj = await response.json();
-                        ultimoErro = erroObj.error?.message || "O Google recusou a requisição.";
-                        console.warn(`Falha no modelo ${modelo.nome}:`, ultimoErro);
-                        // Continua o loop para tentar o próximo modelo
-                    }
-                } catch (e) {
-                    ultimoErro = e.message;
-                    console.warn(`Erro na tentativa com ${modelo.nome}:`, e);
-                }
+            if (!response.ok) {
+                const erroObj = await response.json();
+                throw new Error(erroObj.error?.message || "Erro na API do Google");
             }
+
+            const data = await response.json();
+            let textoResposta = data.candidates[0].content.parts[0].text;
             
-            // Se chegou aqui, todos os modelos falharam
-            throw new Error(`Servidor recusou a chave. (Detalhe: ${ultimoErro})`);
+            const jsonStart = textoResposta.indexOf('[');
+            const jsonEnd = textoResposta.lastIndexOf(']');
+            
+            if (jsonStart !== -1 && jsonEnd !== -1) {
+                textoResposta = textoResposta.substring(jsonStart, jsonEnd + 1);
+                return JSON.parse(textoResposta);
+            } else {
+                throw new Error("A IA falhou em formatar a tabela.");
+            }
         }
 
-        // ==========================================
         // ALGORITMO DE OTIMIZAÇÃO MAX RECTS
-        // ==========================================
         class Packer {
             constructor(w, h) { this.root = { x: 0, y: 0, w: w, h: h }; }
             fit(blocks) {
