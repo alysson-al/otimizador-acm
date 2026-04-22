@@ -182,7 +182,7 @@
         }
 
         // ==========================================
-        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL (COM TENTATIVAS MÚLTIPLAS)
+        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL ATUALIZADA
         // ==========================================
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -210,7 +210,7 @@
                 }
 
                 if (extractedText.trim().length === 0) {
-                    throw new Error("O PDF não contém texto lido (parece ser uma imagem).");
+                    throw new Error("O PDF não contém texto lido (parece ser uma imagem ou arquivo bloqueado).");
                 }
 
                 // 2. Chamar IA
@@ -231,7 +231,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                statusLabel.innerText = `❌ Falha: ${error.message}`;
+                statusLabel.innerText = `❌ Erro da IA: ${error.message}`;
                 statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
             } finally {
                 aiLoading.classList.add('hidden');
@@ -240,61 +240,40 @@
         }
 
         async function chamarInteligenciaArtificial(textoBruto, apiKey) {
-            // Tenta do mais novo para o mais antigo, garantindo que não trave
-            const modelosParaTentar = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
-            let erroFinal = "";
+            // Chamando exclusivamente o modelo flash (mais rápido e estável para extração)
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            const prompt = `Extraia as peças que precisam ser cortadas deste texto bruto de um PDF.
+            Ignore cabeçalhos, logos, e texto que não seja as medidas da peça.
+            Retorne um array JSON com objetos contendo estritamente: "w" (largura em número), "h" (altura em número), e "qtd" (quantidade em número).
+            
+            Texto bruto:
+            ${textoBruto}`;
 
-            const prompt = `
-                Analise o seguinte texto bruto extraído de um relatório de projeto em PDF. 
-                Sua única tarefa é encontrar as medidas das peças a serem cortadas (Largura, Altura e Quantidade). 
-                Ignore cabeçalhos, logos, rodapés e texto não numérico.
-                
-                RETORNE APENAS UM ARRAY JSON VÁLIDO. Não escreva mais nada. Formato esperado:
-                [{"w": 1000, "h": 500, "qtd": 2}, {"w": 800, "h": 400, "qtd": 5}]
-                
-                Texto bruto:
-                ${textoBruto}
-            `;
-
-            const configFetch = {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.1 }
-                })
-            };
-
-            for (let modelo of modelosParaTentar) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-                
-                try {
-                    const response = await fetch(url, configFetch);
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.candidates && data.candidates.length > 0) {
-                            let resultText = data.candidates[0].content.parts[0].text;
-                            
-                            // Caça o JSON na resposta
-                            const jsonStart = resultText.indexOf('[');
-                            const jsonEnd = resultText.lastIndexOf(']');
-                            
-                            if (jsonStart !== -1 && jsonEnd !== -1) {
-                                resultText = resultText.substring(jsonStart, jsonEnd + 1);
-                                return JSON.parse(resultText);
-                            }
-                        }
-                    } else {
-                        const err = await response.json();
-                        erroFinal = err.error?.message || "Erro na API.";
+                    generationConfig: { 
+                        temperature: 0.1,
+                        responseMimeType: "application/json" // OBRIGA O GOOGLE A MANDAR O CÓDIGO LIMPO E MATEMÁTICO
                     }
-                } catch (e) {
-                    erroFinal = e.message;
-                }
+                })
+            });
+
+            if (!response.ok) {
+                const erroObj = await response.json();
+                throw new Error(erroObj.error?.message || "O Google recusou sua chave. Verifique se ela foi copiada corretamente.");
             }
-            
-            throw new Error(`Servidor recusou a chave. Último erro: ${erroFinal}`);
+
+            const data = await response.json();
+            if (!data.candidates || data.candidates.length === 0) {
+                 throw new Error("A IA não retornou nenhum dado.");
+            }
+
+            const textoResposta = data.candidates[0].content.parts[0].text;
+            return JSON.parse(textoResposta);
         }
 
         // ==========================================
