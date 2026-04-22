@@ -94,7 +94,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        A IA está analisando a tabela do PDF...
+                        A IA está analisando a tabela do PDF... (Pode levar alguns segundos)
                     </div>
                     <p id="pdfStatus" class="text-sm mt-2 font-semibold hidden"></p>
                 </div>
@@ -182,7 +182,7 @@
         }
 
         // ==========================================
-        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL ATUALIZADA
+        // LÓGICA DE PDF E INTELIGÊNCIA ARTIFICIAL (SISTEMA DE CASCATA)
         // ==========================================
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -235,45 +235,74 @@
                 statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
             } finally {
                 aiLoading.classList.add('hidden');
-                event.target.value = ''; // Limpa o input para poder tentar novamente
+                event.target.value = ''; // Limpa o input para poder tentar o mesmo arquivo novamente
             }
         }
 
         async function chamarInteligenciaArtificial(textoBruto, apiKey) {
-            // Chamando exclusivamente o modelo flash (mais rápido e estável para extração)
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-            
+            // SISTEMA DE CASCATA: Tenta os modelos do mais atual para o mais antigo e universal
+            const modelos = [
+                { nome: 'gemini-1.5-flash', usarJsonMode: true },
+                { nome: 'gemini-1.5-pro', usarJsonMode: true },
+                { nome: 'gemini-pro', usarJsonMode: false }
+            ];
+
+            let ultimoErro = "";
+
             const prompt = `Extraia as peças que precisam ser cortadas deste texto bruto de um PDF.
             Ignore cabeçalhos, logos, e texto que não seja as medidas da peça.
-            Retorne um array JSON com objetos contendo estritamente: "w" (largura em número), "h" (altura em número), e "qtd" (quantidade em número).
+            Retorne um array JSON com objetos contendo estritamente: "w" (largura em número), "h" (altura em número), e "qtd" (quantidade em número). Exemplo: [{"w": 1000, "h": 500, "qtd": 2}]
+            Não escreva NENHUM texto extra. Apenas o array JSON.
             
             Texto bruto:
             ${textoBruto}`;
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { 
-                        temperature: 0.1,
-                        responseMimeType: "application/json" // OBRIGA O GOOGLE A MANDAR O CÓDIGO LIMPO E MATEMÁTICO
+            for (let modelo of modelos) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo.nome}:generateContent?key=${apiKey}`;
+                
+                let generationConfig = { temperature: 0.1 };
+                if (modelo.usarJsonMode) {
+                    generationConfig.responseMimeType = "application/json";
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: generationConfig
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        let textoResposta = data.candidates[0].content.parts[0].text;
+                        
+                        // LIMPEZA FORÇADA: Pega apenas o que está entre os colchetes do JSON
+                        const jsonStart = textoResposta.indexOf('[');
+                        const jsonEnd = textoResposta.lastIndexOf(']');
+                        
+                        if (jsonStart !== -1 && jsonEnd !== -1) {
+                            textoResposta = textoResposta.substring(jsonStart, jsonEnd + 1);
+                            return JSON.parse(textoResposta);
+                        } else {
+                            throw new Error("A IA não retornou um formato JSON válido.");
+                        }
+                    } else {
+                        const erroObj = await response.json();
+                        ultimoErro = erroObj.error?.message || "O Google recusou a requisição.";
+                        console.warn(`Falha no modelo ${modelo.nome}:`, ultimoErro);
+                        // Continua o loop para tentar o próximo modelo
                     }
-                })
-            });
-
-            if (!response.ok) {
-                const erroObj = await response.json();
-                throw new Error(erroObj.error?.message || "O Google recusou sua chave. Verifique se ela foi copiada corretamente.");
+                } catch (e) {
+                    ultimoErro = e.message;
+                    console.warn(`Erro na tentativa com ${modelo.nome}:`, e);
+                }
             }
-
-            const data = await response.json();
-            if (!data.candidates || data.candidates.length === 0) {
-                 throw new Error("A IA não retornou nenhum dado.");
-            }
-
-            const textoResposta = data.candidates[0].content.parts[0].text;
-            return JSON.parse(textoResposta);
+            
+            // Se chegou aqui, todos os modelos falharam
+            throw new Error(`Servidor recusou a chave. (Detalhe: ${ultimoErro})`);
         }
 
         // ==========================================
