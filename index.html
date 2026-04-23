@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Otimizador de Corte IA - ACM</title>
+    <title>Otimizador de Corte - Alunobre</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
@@ -26,17 +26,17 @@
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 no-print flex justify-between items-end">
             <div>
-                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte <span class="text-blue-500 text-xl">v6.6</span></h1>
-                <p class="text-gray-600">IA, relatórios de logística e algoritmo de encaixe com rotação inteligente.</p>
+                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte - by Alysson A. Lima <span class="text-blue-500 text-xl">v2026</span></h1>
+                <p class="text-gray-600">Leitura instantânea de CSV, IA de resgate e relatórios de logística.</p>
             </div>
-            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center bg-gray-200 px-3 py-2 rounded font-bold transition">
-                🔑 Configurar API (Google AI)
+            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center bg-gray-200 px-3 py-2 rounded font-bold transition shadow-sm">
+                🔑 Configurar API (IA)
             </button>
         </header>
 
         <div id="apiConfigPanel" class="hidden bg-gray-800 text-white p-6 rounded-lg mb-6 shadow-xl no-print border-l-4 border-blue-500">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="text-lg font-bold text-blue-300">Conexão com a Inteligência Artificial</h3>
+                <h3 class="text-lg font-bold text-blue-300">Conexão com a Inteligência Artificial (Plano B)</h3>
                 <button onclick="toggleTutorial()" class="text-sm text-blue-400 hover:text-blue-200 underline font-semibold">❓ Como criar minha chave?</button>
             </div>
             
@@ -50,7 +50,7 @@
                 </ol>
             </div>
 
-            <p class="text-sm text-gray-300 mb-4">A chave fica salva apenas no seu computador de forma segura.</p>
+            <p class="text-sm text-gray-300 mb-4">A IA é usada apenas quando você importa um PDF. Para CSV, ela não é necessária. A chave fica salva localmente.</p>
             <div class="flex gap-2">
                 <input type="password" id="apiKeyInput" placeholder="Cole sua chave AIzaSy..." class="w-full bg-gray-700 border border-gray-600 rounded p-3 text-sm text-white focus:outline-none focus:border-blue-400">
                 <button onclick="testarChave()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">1. Testar</button>
@@ -120,43 +120,56 @@
                         <input type="checkbox" id="permitirRotacao" checked class="mr-2 w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
                         <span class="text-sm font-bold text-blue-900 leading-tight">Permitir girar peças no corte <br><span class="text-xs text-gray-500 font-normal">(Melhora o aproveitamento do material)</span></span>
                     </label>
-                    <p class="text-[10px] text-gray-400 mt-1 ml-7">⚠️ Desmarque apenas se o material possuir sentido de veio (Ex: Amadeirado ou Escovado).</p>
+                    <p class="text-[10px] text-gray-400 mt-1 ml-7">⚠️ Desmarque apenas se o material possuir sentido de veio.</p>
                 </div>
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-md col-span-1 md:col-span-2">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Leitura de Peças</h2>
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Importação de Peças</h2>
                 
-                <div class="mb-4 p-4 bg-gray-50 border rounded-lg border-blue-200 shadow-inner">
-                    <div class="flex justify-between items-start mb-2">
-                        <label class="block text-sm font-bold text-blue-900">📄 Importar PDF do Projeto (Leitura via IA)</label>
-                        <span class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold border border-yellow-300">⚠️ Requer API Key</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="p-4 bg-green-50 border rounded-lg border-green-300 shadow-inner">
+                        <div class="flex justify-between items-start mb-2">
+                            <label class="block text-sm font-bold text-green-900">📊 Importar Tabela CSV</label>
+                            <span class="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded font-bold border border-green-300">Rápido e Offline</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-3">Opção recomendada. Lê os arquivos exportados pelo sistema instantaneamente, sem usar internet ou IA.</p>
+                        
+                        <input type="file" id="csvInput" accept=".csv" onchange="lerCSV(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700 cursor-pointer transition">
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">O sistema só fará a extração inteligente da tabela se você configurar a sua chave no painel superior.</p>
-                    
-                    <input type="file" id="pdfInput" accept="application/pdf" onchange="lerPDF(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer transition">
-                    
-                    <div id="aiLoading" class="hidden mt-3 flex items-center text-blue-600 text-sm font-semibold">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        A IA está analisando a tabela...
+
+                    <div class="p-4 bg-blue-50 border rounded-lg border-blue-200 shadow-inner">
+                        <div class="flex justify-between items-start mb-2">
+                            <label class="block text-sm font-bold text-blue-900">📄 Importar PDF via IA</label>
+                            <span class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold border border-yellow-300">Requer API Key</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-3">Plano B. Use caso o cliente tenha enviado apenas o arquivo PDF. Depende da chave salva nas configurações.</p>
+                        
+                        <input type="file" id="pdfInput" accept="application/pdf" onchange="lerPDF(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer transition">
+                        
+                        <div id="aiLoading" class="hidden mt-3 flex items-center text-blue-600 text-sm font-semibold">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            A IA está analisando...
+                        </div>
                     </div>
-                    <p id="pdfStatus" class="text-sm mt-2 font-semibold hidden"></p>
                 </div>
 
+                <p id="leituraStatus" class="text-sm mb-4 font-semibold hidden"></p>
+
                 <label class="block text-sm font-bold text-gray-700 mb-2">Revisão de Peças (Largura x Altura Quantidade)</label>
-                <textarea id="textoPecas" rows="5" class="w-full border border-gray-300 rounded p-3 font-mono text-sm mb-4 focus:outline-none focus:border-blue-500" placeholder="Os dados extraídos aparecerão aqui."></textarea>
+                <textarea id="textoPecas" rows="5" class="w-full border border-gray-300 rounded p-3 font-mono text-sm mb-4 focus:outline-none focus:border-blue-500" placeholder="Os dados extraídos do CSV ou do PDF aparecerão aqui. Você pode alterar manualmente se precisar."></textarea>
                 
-                <button onclick="processarOtimizacao()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md">
-                    Calcular Otimização Inteligente
+                <button onclick="processarOtimizacao()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-4 rounded text-lg transition duration-200 shadow-md">
+                    Calcular Otimização de Chapas
                 </button>
 
                 <div id="loadingContainer" class="hidden mt-4">
                     <div class="flex justify-between mb-1">
-                        <span class="text-sm font-medium text-blue-700">Calculando arranjo...</span>
-                        <span class="text-sm font-medium text-blue-700" id="progressText">0%</span>
+                        <span class="text-sm font-medium text-gray-700">Calculando arranjos matemáticos...</span>
+                        <span class="text-sm font-medium text-gray-700" id="progressText">0%</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                        <div id="progressBar" class="bg-gray-800 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -165,7 +178,7 @@
         <div id="painelResultados" class="hidden mt-8">
             <div class="flex justify-between items-center mb-4 no-print border-b pb-2 border-gray-300">
                 <h2 class="text-2xl font-bold text-gray-800">Resultados da Otimização</h2>
-                <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded flex items-center shadow-md transition">
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded flex items-center shadow-md transition">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     Imprimir Relatório
                 </button>
@@ -211,21 +224,21 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2 flex flex-col justify-center">
                     <p class="text-sm text-blue-600 font-semibold mb-2">Resumo de Compra (Chapas)</p>
-                    <div id="resumoCompra" class="text-lg font-bold text-blue-900 leading-tight"></div>
-                    <div class="mt-2 text-sm text-blue-700 border-t border-blue-200 pt-2 flex justify-between">
+                    <div id="resumoCompra" class="text-xl font-bold text-blue-900 leading-tight"></div>
+                    <div class="mt-3 text-sm text-blue-800 border-t border-blue-200 pt-2 flex justify-between">
                         <span>Área Bruta Comprada:</span>
                         <span id="resAreaComprada" class="font-bold">0 m²</span>
                     </div>
                 </div>
                 <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center flex flex-col justify-center">
-                    <p class="text-sm text-green-600 font-semibold">Aproveitamento</p>
-                    <p class="text-3xl font-bold text-green-900" id="resAprov">0%</p>
+                    <p class="text-sm text-green-700 font-semibold">Aproveitamento</p>
+                    <p class="text-4xl font-bold text-green-700" id="resAprov">0%</p>
                 </div>
                 <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-center flex flex-col justify-center">
-                    <p class="text-sm text-red-600 font-semibold">Perda (Área)</p>
-                    <p class="text-3xl font-bold text-red-900" id="resPerda">0%</p>
+                    <p class="text-sm text-red-700 font-semibold">Perda (Área)</p>
+                    <p class="text-4xl font-bold text-red-700" id="resPerda">0%</p>
                 </div>
             </div>
 
@@ -245,7 +258,9 @@
         let bloqueioCreditosAtivo = false;
         let timerContagem;
 
-        // TOGGLE PARA INTERFACE
+        // ==========================================
+        // INTERFACE E MENUS
+        // ==========================================
         function toggleTutorial() { document.getElementById('tutorialAPI').classList.toggle('hidden'); }
         function toggleMapVisibility() {
             const isChecked = document.getElementById('toggleMapas').checked;
@@ -253,7 +268,9 @@
         }
         function toggleConfig() { document.getElementById('apiConfigPanel').classList.toggle('hidden'); }
 
-        // TRADUÇÃO DE ERROS
+        // ==========================================
+        // TRADUÇÃO DE ERROS E TRAVA DE SEGURANÇA (IA)
+        // ==========================================
         function traduzirErroGoogle(mensagemErroOriginal, statusHttp) {
             const msg = String(mensagemErroOriginal).toLowerCase();
             if (msg.includes("quota") || msg.includes("exhausted") || msg.includes("billing")) return "O limite de uso gratuito da sua Chave de API foi atingido. Tente novamente amanhã ou verifique sua conta do Google AI Studio.";
@@ -262,24 +279,25 @@
             return mensagemErroOriginal;
         }
 
-        function ativarTravaDeSeguranca(statusElementId) {
+        function ativarTravaDeSeguranca() {
             bloqueioCreditosAtivo = true;
-            const statusLabel = document.getElementById(statusElementId);
+            const statusLabel = document.getElementById('leituraStatus');
             const pdfInput = document.getElementById('pdfInput');
             if (pdfInput) pdfInput.disabled = true;
 
             let tempoRestante = 15; 
             clearInterval(timerContagem);
             timerContagem = setInterval(() => {
-                statusLabel.innerText = `⚠️ Servidor lotado. Para proteger seus créditos, aguarde ${tempoRestante} segundos para tentar novamente...`;
+                statusLabel.innerText = `⚠️ Servidor da IA lotado. Para proteger seus créditos, aguarde ${tempoRestante} segundos...`;
                 statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block bg-yellow-100 p-2 rounded";
+                statusLabel.classList.remove('hidden');
                 tempoRestante--;
 
                 if (tempoRestante < 0) {
                     clearInterval(timerContagem);
                     bloqueioCreditosAtivo = false;
                     if (pdfInput) pdfInput.disabled = false;
-                    statusLabel.innerText = "✅ Sistema liberado. Você já pode anexar o PDF novamente.";
+                    statusLabel.innerText = "✅ Sistema de IA liberado. Tente anexar o PDF novamente.";
                     statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
                 }
             }, 1000);
@@ -296,7 +314,7 @@
                 return;
             }
 
-            status.innerText = "⏳ Testando conexão com os servidores do Google...";
+            status.innerText = "⏳ Testando conexão...";
             status.className = "text-sm text-yellow-400 mt-3 block font-bold";
             status.classList.remove('hidden');
 
@@ -308,25 +326,16 @@
                 });
 
                 if(response.ok) {
-                    status.innerText = "✅ SUCESSO! A chave é válida. Clique em Salvar Chave.";
+                    status.innerText = "✅ SUCESSO! A chave é válida. Clique em Salvar.";
                     status.className = "text-sm text-green-400 mt-3 block font-bold";
                 } else {
                     const err = await response.json();
                     const erroTraduzido = traduzirErroGoogle(err.error?.message || "Chave Inválida", response.status);
-                    
-                    if (erroTraduzido.includes("muita demanda")) {
-                        status.innerText = `⚠️ AVISO: ${erroTraduzido} Aguarde e teste de novo.`;
-                        status.className = "text-sm text-yellow-500 mt-3 block font-bold";
-                    } else if (erroTraduzido.includes("limite")) {
-                        status.innerText = `🚫 ${erroTraduzido}`;
-                        status.className = "text-sm text-red-500 mt-3 block font-bold";
-                    } else {
-                        status.innerText = `❌ ERRO: ${erroTraduzido}`;
-                        status.className = "text-sm text-red-400 mt-3 block font-bold";
-                    }
+                    status.innerText = erroTraduzido.includes("muita demanda") || erroTraduzido.includes("limite") ? `⚠️ AVISO: ${erroTraduzido}` : `❌ ERRO: ${erroTraduzido}`;
+                    status.className = erroTraduzido.includes("muita demanda") || erroTraduzido.includes("limite") ? "text-sm text-yellow-500 mt-3 block font-bold" : "text-sm text-red-400 mt-3 block font-bold";
                 }
             } catch(e) {
-                status.innerText = `❌ ERRO DE REDE: Verifique sua conexão com a internet.`;
+                status.innerText = `❌ ERRO DE REDE: Verifique sua internet.`;
                 status.className = "text-sm text-red-400 mt-3 block font-bold";
             }
         }
@@ -336,26 +345,89 @@
             if (input) {
                 localStorage.setItem('geminiApiKey', input);
                 const status = document.getElementById('apiSaveStatus');
-                status.innerText = "✅ Chave salva e trancada no seu navegador!";
+                status.innerText = "✅ Chave salva!";
                 status.className = "text-sm text-green-400 mt-3 block font-bold";
                 status.classList.remove('hidden');
-                
-                setTimeout(() => { document.getElementById('apiConfigPanel').classList.add('hidden'); }, 2500);
+                setTimeout(() => { document.getElementById('apiConfigPanel').classList.add('hidden'); }, 2000);
             }
         }
 
         window.onload = () => {
             const savedKey = localStorage.getItem('geminiApiKey');
-            if (savedKey) {
-                document.getElementById('apiKeyInput').value = savedKey;
-            } else {
-                document.getElementById('apiConfigPanel').classList.remove('hidden');
-            }
+            if (savedKey) { document.getElementById('apiKeyInput').value = savedKey; } 
+            else { document.getElementById('apiConfigPanel').classList.remove('hidden'); }
         };
 
         function getApiKey() { return localStorage.getItem('geminiApiKey'); }
 
-        // LÓGICA DE PDF E IA
+        // ==========================================
+        // LEITURA NATIVA DE CSV (RÁPIDA, SEM IA E OFFLINE)
+        // ==========================================
+        async function lerCSV(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            const statusLabel = document.getElementById('leituraStatus');
+            document.getElementById('textoPecas').value = "";
+            statusLabel.classList.add('hidden');
+
+            try {
+                const text = await file.text();
+                const lines = text.split('\n');
+                let textoFormatado = "";
+
+                // O Algoritmo varre linha por linha procurando os números do projeto
+                for(let line of lines) {
+                    // Pula cabeçalhos e totais textuais
+                    if (line.trim() === '' || line.toLowerCase().includes('tipo') || line.toLowerCase().includes('subtotais') || line.toLowerCase().includes('totais')) continue;
+
+                    // Separa as colunas delimitadas por ponto e vírgula, vírgula ou tabulação
+                    const cols = line.replace(/"/g, '').split(/;|,|\t/);
+                    
+                    let numsEncontrados = [];
+                    for (let col of cols) {
+                        let numStr = col.trim();
+                        // Verifica se o conteúdo da coluna é puramente matemático (aceitando casas decimais)
+                        if (/^\d+([.,]\d+)?$/.test(numStr)) {
+                            numsEncontrados.push(numStr);
+                        }
+                    }
+
+                    // Se a linha tem pelo menos 3 números, eles representam L, H e Qtde (padrão CEM Pro)
+                    if (numsEncontrados.length >= 3) {
+                        let w = parseFloat(numsEncontrados[0].replace(',', '.'));
+                        let h = parseFloat(numsEncontrados[1].replace(',', '.'));
+                        let qtd = parseInt(numsEncontrados[2]);
+
+                        if (w > 0 && h > 0 && qtd > 0) {
+                            textoFormatado += `${w} x ${h} \t ${qtd}\n`;
+                        }
+                    }
+                }
+
+                if (textoFormatado.trim() === "") {
+                    // Se não conseguir encontrar o padrão exato, joga o texto bruto para o usuário arrumar
+                    document.getElementById('textoPecas').value = text;
+                    statusLabel.innerText = "⚠️ O CSV foi lido, mas o formato precisará de ajuste manual abaixo.";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block";
+                } else {
+                    // Sucesso total
+                    document.getElementById('textoPecas').value = textoFormatado;
+                    statusLabel.innerText = "✅ Tabela CSV importada e calculada instantaneamente (Sem uso de IA)!";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
+                }
+            } catch (error) {
+                statusLabel.innerText = `❌ Erro ao abrir CSV: ${error.message}`;
+                statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
+            } finally {
+                statusLabel.classList.remove('hidden');
+                event.target.value = ''; // Limpa o input
+            }
+        }
+
+        // ==========================================
+        // LEITURA DE PDF (PLANO B VIA IA GOOGLE)
+        // ==========================================
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         async function lerPDF(event) {
@@ -367,7 +439,7 @@
             const file = event.target.files[0];
             if(!file) return;
             
-            const statusLabel = document.getElementById('pdfStatus');
+            const statusLabel = document.getElementById('leituraStatus');
             const aiLoading = document.getElementById('aiLoading');
             statusLabel.classList.add('hidden');
             aiLoading.classList.remove('hidden');
@@ -386,7 +458,7 @@
                 }
 
                 if (extractedText.trim().length === 0) {
-                    throw new Error("O PDF não contém texto lido (pode ser uma imagem).");
+                    throw new Error("O PDF não contém texto selecionável.");
                 }
 
                 const apiKey = getApiKey();
@@ -396,8 +468,8 @@
                     const textoFormatado = pecasProcessadas.map(p => `${p.w} x ${p.h} \t ${p.qtd}`).join("\n");
                     
                     document.getElementById('textoPecas').value = textoFormatado;
-                    statusLabel.innerText = "✅ Tabela extraída pela IA! Revise os dados abaixo.";
-                    statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
+                    statusLabel.innerText = "✅ Tabela de PDF extraída pela IA! Revise os dados abaixo.";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-blue-600 block";
                 } else {
                     document.getElementById('textoPecas').value = extractedText;
                     statusLabel.innerText = "⚠️ Chave de API ausente. Revise os dados brutos abaixo.";
@@ -406,16 +478,16 @@
                 }
             } catch (error) {
                 console.error(error);
-                
                 if (error.message.includes("demanda")) {
-                    ativarTravaDeSeguranca('pdfStatus');
-                    statusLabel.classList.remove('hidden');
+                    ativarTravaDeSeguranca('leituraStatus');
                 } else if (error.message.includes("limite")) {
                     statusLabel.innerText = `🚫 ${error.message}`;
                     statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block bg-red-100 p-2 rounded";
+                    statusLabel.classList.remove('hidden');
                 } else {
                     statusLabel.innerText = `❌ Falha: ${error.message}`;
                     statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
+                    statusLabel.classList.remove('hidden');
                 }
             } finally {
                 aiLoading.classList.add('hidden');
@@ -452,7 +524,7 @@
         }
 
         // ==========================================
-        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS (ATUALIZADO COM ROTAÇÃO)
+        // ALGORITMO DE OTIMIZAÇÃO (MAX RECTS) COM ROTAÇÃO
         // ==========================================
         class Packer {
             constructor(w, h) { this.root = { x: 0, y: 0, w: w, h: h }; }
@@ -461,17 +533,12 @@
                 let node;
                 for (let n = 0; n < blocks.length; n++) {
                     let block = blocks[n];
-                    
-                    // Tenta encaixar no formato original (Largura x Altura)
                     if (node = this.findNode(this.root, block.w, block.h)) {
                         block.fit = this.splitNode(node, block.w, block.h);
                         block.isRotated = false;
                     } 
-                    // Se não couber E a rotação estiver permitida, tenta deitado (Altura x Largura)
                     else if (permitirRotacao && (node = this.findNode(this.root, block.h, block.w))) {
                         block.fit = this.splitNode(node, block.h, block.w);
-                        
-                        // Inverte fisicamente as medidas para o sistema desenhar deitado
                         let tmpRealW = block.w_real; block.w_real = block.h_real; block.h_real = tmpRealW;
                         let tmpW = block.w; block.w = block.h; block.h = tmpW;
                         block.isRotated = true;
@@ -524,8 +591,6 @@
             const espChapa = parseFloat(document.getElementById('espChapa').value) || 4;
             const pesoM2 = parseFloat(document.getElementById('pesoM2').value) || 5.5;
             const corChapa = document.getElementById('corChapa').value || "Não informada";
-            
-            // Lendo a nova configuração de rotação
             const permitirRotacao = document.getElementById('permitirRotacao').checked;
             
             const texto = document.getElementById('textoPecas').value;
@@ -535,13 +600,11 @@
             const chapasDisp = getChapasDisponiveis(descLat);
             if(chapasDisp.length === 0) { alert("Informe pelo menos um tamanho de chapa."); return; }
 
-            // Populando os parâmetros no cabeçalho do relatório
             document.getElementById('relCor').innerText = corChapa;
             document.getElementById('relEsp').innerText = espChapa + " mm";
             document.getElementById('relPesoRef').innerText = pesoM2 + " kg/m²";
             document.getElementById('relRefile').innerText = descLat + " mm";
             document.getElementById('relFresa').innerText = serra + " mm";
-            
             document.getElementById('relGiro').innerText = permitirRotacao ? "SIM" : "NÃO";
             document.getElementById('relGiro').className = permitirRotacao ? "font-bold text-green-600" : "font-bold text-red-600";
 
@@ -566,7 +629,6 @@
                 }
             });
 
-            // Ordena as peças da maior para a menor (essencial para o aproveitamento)
             blocks.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
 
             let chapasUsadas = [];
@@ -583,7 +645,6 @@
                     let packer = new Packer(chapa.w_util, chapa.h_util);
                     let blocosTeste = blocksRestantes.map(b => ({...b})); 
                     
-                    // Passa a permissão de rotação para o motor matemático
                     packer.fit(blocosTeste, permitirRotacao);
                     let encaixados = blocosTeste.filter(b => b.fit);
                     
@@ -711,11 +772,8 @@
                         if (p.w_real * escala > 30 && p.h_real * escala > 15) {
                             ctx.fillStyle = '#ffffff'; 
                             ctx.font = 'bold 12px Arial'; 
-                            
-                            // Se a peça foi rotacionada, adiciona o indicador (R)
                             let textoMedida = `${p.w_real}x${p.h_real}`;
                             if (p.isRotated) { textoMedida += " (R)"; }
-                            
                             ctx.fillText(textoMedida, x + 5, y + 15);
                         }
                     }
