@@ -8,14 +8,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         .canvas-container { overflow-x: auto; white-space: nowrap; padding-bottom: 1rem; }
-        canvas { border: 2px solid #4a5568; margin-right: 1rem; background-color: #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        canvas { border: 2px solid #4a5568; margin-right: 1rem; background-color: #edf2f7; box-shadow: 0 4px 6px rgba(0,0,0,0.1); page-break-inside: avoid; }
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
             .no-print { display: none !important; }
             #painelResultados { display: block !important; margin-top: 0; }
             .canvas-container { overflow: visible; white-space: normal; display: flex; flex-wrap: wrap; }
-            canvas { page-break-inside: avoid; margin-bottom: 20px; }
+            canvas { margin-bottom: 20px; }
             .print-header { display: block !important; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 24px; }
+            .print-params { display: flex !important; }
         }
         .print-header { display: none; }
     </style>
@@ -25,59 +26,101 @@
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 no-print flex justify-between items-end">
             <div>
-                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte <span class="text-blue-500 text-xl">v4.0 (Gemini 2.5)</span></h1>
-                <p class="text-gray-600">Otimização inteligente com seleção multichapas e leitura de projetos via IA.</p>
+                <h1 class="text-3xl font-bold text-blue-900">Otimizador de Plano de Corte <span class="text-blue-500 text-xl">v6.6</span></h1>
+                <p class="text-gray-600">IA, relatórios de logística e algoritmo de encaixe com rotação inteligente.</p>
             </div>
-            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center bg-gray-200 px-3 py-2 rounded font-bold">
+            <button onclick="toggleConfig()" class="text-sm text-gray-500 hover:text-blue-600 flex items-center bg-gray-200 px-3 py-2 rounded font-bold transition">
                 🔑 Configurar API (Google AI)
             </button>
         </header>
 
         <div id="apiConfigPanel" class="hidden bg-gray-800 text-white p-6 rounded-lg mb-6 shadow-xl no-print border-l-4 border-blue-500">
-            <h3 class="text-lg font-bold mb-2 text-blue-300">Conexão com a Inteligência Artificial</h3>
-            <p class="text-sm text-gray-300 mb-4">Insira a sua chave API. O sistema está configurado para utilizar o Gemini 2.5 Flash.</p>
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-lg font-bold text-blue-300">Conexão com a Inteligência Artificial</h3>
+                <button onclick="toggleTutorial()" class="text-sm text-blue-400 hover:text-blue-200 underline font-semibold">❓ Como criar minha chave?</button>
+            </div>
+            
+            <div id="tutorialAPI" class="hidden bg-gray-700 p-4 rounded mb-4 text-sm text-gray-200 border border-gray-600">
+                <p class="font-bold text-white mb-2">Passo a passo para gerar sua chave gratuita:</p>
+                <ol class="list-decimal pl-5 space-y-1">
+                    <li>Acesse o <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-400 font-bold underline">Google AI Studio</a> e faça login.</li>
+                    <li>Clique no botão azul <b>"Create API key"</b>.</li>
+                    <li>Na janela que abrir, clique no botão cinza <b>"Create API key in new project"</b>.</li>
+                    <li>Copie a chave gerada (ela começa com <i>AIzaSy...</i>) e cole no campo abaixo.</li>
+                </ol>
+            </div>
+
+            <p class="text-sm text-gray-300 mb-4">A chave fica salva apenas no seu computador de forma segura.</p>
             <div class="flex gap-2">
                 <input type="password" id="apiKeyInput" placeholder="Cole sua chave AIzaSy..." class="w-full bg-gray-700 border border-gray-600 rounded p-3 text-sm text-white focus:outline-none focus:border-blue-400">
-                <button onclick="testarChave()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">1. Testar Conexão</button>
+                <button onclick="testarChave()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">1. Testar</button>
                 <button onclick="salvarApiKey()" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded text-sm font-bold transition whitespace-nowrap">2. Salvar Chave</button>
             </div>
             <div id="apiSaveStatus" class="text-sm mt-3 hidden font-bold"></div>
         </div>
 
-        <div class="print-header">Relatório de Plano de Corte - ACM</div>
+        <div class="print-header">Relatório Técnico de Produção e Corte - ACM</div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
-            <div class="bg-white p-6 rounded-lg shadow-md col-span-1">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Chapas Disponíveis (mm)</h2>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-gray-700 w-6">1:</span>
-                        <input type="number" id="chapaW1" value="1220" class="w-full border rounded p-2 text-sm" placeholder="Largura">
-                        <span class="text-gray-500">x</span>
-                        <input type="number" id="chapaH1" value="2440" class="w-full border rounded p-2 text-sm" placeholder="Altura">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-gray-700 w-6">2:</span>
-                        <input type="number" id="chapaW2" value="1500" class="w-full border rounded p-2 text-sm" placeholder="Largura">
-                        <span class="text-gray-500">x</span>
-                        <input type="number" id="chapaH2" value="5000" class="w-full border rounded p-2 text-sm" placeholder="Altura">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-gray-700 w-6">3:</span>
-                        <input type="number" id="chapaW3" class="w-full border rounded p-2 text-sm" placeholder="Largura">
-                        <span class="text-gray-500">x</span>
-                        <input type="number" id="chapaH3" class="w-full border rounded p-2 text-sm" placeholder="Altura">
-                    </div>
+            <div class="bg-white p-6 rounded-lg shadow-md col-span-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Configurações do Material</h2>
+                    <div class="space-y-3">
+                        <p class="text-xs font-bold text-gray-500 uppercase">Tamanhos de Chapa (mm)</p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-gray-700 w-6">1:</span>
+                            <input type="number" id="chapaW1" value="1220" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                            <span class="text-gray-500">x</span>
+                            <input type="number" id="chapaH1" value="5000" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-gray-700 w-6">2:</span>
+                            <input type="number" id="chapaW2" value="1500" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                            <span class="text-gray-500">x</span>
+                            <input type="number" id="chapaH2" value="5000" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-sm font-bold text-gray-700 w-6">3:</span>
+                            <input type="number" id="chapaW3" class="w-full border rounded p-2 text-sm" placeholder="Largura">
+                            <span class="text-gray-500">x</span>
+                            <input type="number" id="chapaH3" class="w-full border rounded p-2 text-sm" placeholder="Altura">
+                        </div>
 
-                    <div class="border-t pt-3 mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Desconto Lateral / Refile (mm)</label>
-                        <input type="number" id="descLat" value="10" class="w-full border rounded p-2 mt-1">
-                    </div>
+                        <div class="border-t pt-3 mt-4 grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700">Espessura (mm)</label>
+                                <input type="number" id="espChapa" value="4" class="w-full border rounded p-2 mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700">Peso (kg/m²)</label>
+                                <input type="number" id="pesoM2" value="5.5" step="0.1" class="w-full border rounded p-2 mt-1 text-sm">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mt-1">Cor do Material</label>
+                            <input type="text" id="corChapa" value="Branco" class="w-full border rounded p-2 mt-1 text-sm">
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mt-2">Espessura da Lâmina / Fresa (mm)</label>
-                        <input type="number" id="espSerra" value="4" class="w-full border rounded p-2 mt-1">
+                        <div class="border-t pt-3 mt-4 grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700" title="Desconto das bordas da chapa">Refile Lat. (mm)</label>
+                                <input type="number" id="descLat" value="0" class="w-full border rounded p-2 mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700" title="Espessura consumida pela máquina">Fresa/Lâmina (mm)</label>
+                                <input type="number" id="espSerra" value="5" class="w-full border rounded p-2 mt-1 text-sm">
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="permitirRotacao" checked class="mr-2 w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                        <span class="text-sm font-bold text-blue-900 leading-tight">Permitir girar peças no corte <br><span class="text-xs text-gray-500 font-normal">(Melhora o aproveitamento do material)</span></span>
+                    </label>
+                    <p class="text-[10px] text-gray-400 mt-1 ml-7">⚠️ Desmarque apenas se o material possuir sentido de veio (Ex: Amadeirado ou Escovado).</p>
                 </div>
             </div>
 
@@ -85,21 +128,23 @@
                 <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Leitura de Peças</h2>
                 
                 <div class="mb-4 p-4 bg-gray-50 border rounded-lg border-blue-200 shadow-inner">
-                    <label class="block text-sm font-bold text-blue-900 mb-2">📄 Importar PDF do Projeto (Leitura via IA)</label>
-                    <input type="file" id="pdfInput" accept="application/pdf" onchange="lerPDF(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                    <div class="flex justify-between items-start mb-2">
+                        <label class="block text-sm font-bold text-blue-900">📄 Importar PDF do Projeto (Leitura via IA)</label>
+                        <span class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold border border-yellow-300">⚠️ Requer API Key</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">O sistema só fará a extração inteligente da tabela se você configurar a sua chave no painel superior.</p>
+                    
+                    <input type="file" id="pdfInput" accept="application/pdf" onchange="lerPDF(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer transition">
                     
                     <div id="aiLoading" class="hidden mt-3 flex items-center text-blue-600 text-sm font-semibold">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         A IA está analisando a tabela...
                     </div>
                     <p id="pdfStatus" class="text-sm mt-2 font-semibold hidden"></p>
                 </div>
 
                 <label class="block text-sm font-bold text-gray-700 mb-2">Revisão de Peças (Largura x Altura Quantidade)</label>
-                <textarea id="textoPecas" rows="5" class="w-full border border-gray-300 rounded p-3 font-mono text-sm mb-4" placeholder="Os dados extraídos aparecerão aqui."></textarea>
+                <textarea id="textoPecas" rows="5" class="w-full border border-gray-300 rounded p-3 font-mono text-sm mb-4 focus:outline-none focus:border-blue-500" placeholder="Os dados extraídos aparecerão aqui."></textarea>
                 
                 <button onclick="processarOtimizacao()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md">
                     Calcular Otimização Inteligente
@@ -118,38 +163,126 @@
         </div>
 
         <div id="painelResultados" class="hidden mt-8">
-            <div class="flex justify-between items-center mb-4 no-print">
+            <div class="flex justify-between items-center mb-4 no-print border-b pb-2 border-gray-300">
                 <h2 class="text-2xl font-bold text-gray-800">Resultados da Otimização</h2>
-                <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded flex items-center shadow-md">
+                <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded flex items-center shadow-md transition">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                     Imprimir Relatório
                 </button>
             </div>
             
+            <div id="relatorioParams" class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 text-sm grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Cor</span><span id="relCor" class="font-bold text-gray-800"></span></div>
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Espessura</span><span id="relEsp" class="font-bold text-gray-800"></span></div>
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Peso Ref.</span><span id="relPesoRef" class="font-bold text-gray-800"></span></div>
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Refile Lateral</span><span id="relRefile" class="font-bold text-gray-800"></span></div>
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Fresa/Lâmina</span><span id="relFresa" class="font-bold text-gray-800"></span></div>
+                <div><span class="block text-xs text-gray-500 uppercase font-bold">Rotação Ativa</span><span id="relGiro" class="font-bold text-blue-700"></span></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Total de Peças</p>
+                    <p class="text-2xl font-bold text-gray-800" id="resQtdPecas">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Área das Peças (Líquida)</p>
+                    <p class="text-2xl font-bold text-gray-800" id="resAreaPecas">0 m²</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center" title="Perímetro total para usinagem/corte">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Corte Linear (Usinagem)</p>
+                    <p class="text-2xl font-bold text-gray-800" id="resCorteLinear">0 m</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center border-b-4 border-blue-500">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider" title="Peso de todas as peças já cortadas">Peso Útil (Peças)</p>
+                    <p class="text-2xl font-bold text-blue-800" id="resPesoPecas">0 kg</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center border-b-4 border-gray-800">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider" title="Peso bruto total do material a ser comprado">Peso Bruto (Chapas)</p>
+                    <p class="text-2xl font-bold text-gray-800" id="resPesoChapas">0 kg</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center border-b-4 border-red-500">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider" title="Peso descartado (Retalhos + Fresa)">Peso da Sobra (Sucata)</p>
+                    <p class="text-2xl font-bold text-red-800" id="resPesoSobras">0 kg</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 col-span-1 md:col-span-2">
-                    <p class="text-sm text-blue-600 font-semibold mb-2">Resumo de Compra</p>
+                    <p class="text-sm text-blue-600 font-semibold mb-2">Resumo de Compra (Chapas)</p>
                     <div id="resumoCompra" class="text-lg font-bold text-blue-900 leading-tight"></div>
+                    <div class="mt-2 text-sm text-blue-700 border-t border-blue-200 pt-2 flex justify-between">
+                        <span>Área Bruta Comprada:</span>
+                        <span id="resAreaComprada" class="font-bold">0 m²</span>
+                    </div>
                 </div>
                 <div class="bg-green-50 p-4 rounded-lg border border-green-200 text-center flex flex-col justify-center">
                     <p class="text-sm text-green-600 font-semibold">Aproveitamento</p>
                     <p class="text-3xl font-bold text-green-900" id="resAprov">0%</p>
                 </div>
                 <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-center flex flex-col justify-center">
-                    <p class="text-sm text-red-600 font-semibold">Perda</p>
+                    <p class="text-sm text-red-600 font-semibold">Perda (Área)</p>
                     <p class="text-3xl font-bold text-red-900" id="resPerda">0%</p>
                 </div>
             </div>
-            <h3 class="text-lg font-semibold mb-2">Mapas de Corte</h3>
+
+            <div class="flex justify-between items-center mb-2 mt-8 border-b pb-2">
+                <h3 class="text-lg font-semibold text-gray-800">Mapas de Corte</h3>
+                <label class="flex items-center cursor-pointer no-print bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 transition">
+                    <input type="checkbox" id="toggleMapas" checked onchange="toggleMapVisibility()" class="mr-2 w-4 h-4 text-blue-600 rounded">
+                    <span class="text-sm font-bold text-gray-700">Exibir Mapas no Relatório</span>
+                </label>
+            </div>
+            
             <div id="canvasContainer" class="canvas-container flex pb-4"></div>
         </div>
     </div>
 
     <script>
-        // GERENCIAMENTO E TESTE DA CHAVE API
-        function toggleConfig() {
-            const panel = document.getElementById('apiConfigPanel');
-            panel.classList.toggle('hidden');
+        let bloqueioCreditosAtivo = false;
+        let timerContagem;
+
+        // TOGGLE PARA INTERFACE
+        function toggleTutorial() { document.getElementById('tutorialAPI').classList.toggle('hidden'); }
+        function toggleMapVisibility() {
+            const isChecked = document.getElementById('toggleMapas').checked;
+            document.getElementById('canvasContainer').style.display = isChecked ? 'flex' : 'none';
+        }
+        function toggleConfig() { document.getElementById('apiConfigPanel').classList.toggle('hidden'); }
+
+        // TRADUÇÃO DE ERROS
+        function traduzirErroGoogle(mensagemErroOriginal, statusHttp) {
+            const msg = String(mensagemErroOriginal).toLowerCase();
+            if (msg.includes("quota") || msg.includes("exhausted") || msg.includes("billing")) return "O limite de uso gratuito da sua Chave de API foi atingido. Tente novamente amanhã ou verifique sua conta do Google AI Studio.";
+            if (msg.includes("high demand") || msg.includes("overloaded") || statusHttp === 503 || statusHttp === 429) return "O servidor da IA está com muita demanda."; 
+            if (msg.includes("invalid api key") || msg.includes("api key not valid") || statusHttp === 400) return "A Chave de API informada é inválida ou foi digitada incorretamente.";
+            return mensagemErroOriginal;
+        }
+
+        function ativarTravaDeSeguranca(statusElementId) {
+            bloqueioCreditosAtivo = true;
+            const statusLabel = document.getElementById(statusElementId);
+            const pdfInput = document.getElementById('pdfInput');
+            if (pdfInput) pdfInput.disabled = true;
+
+            let tempoRestante = 15; 
+            clearInterval(timerContagem);
+            timerContagem = setInterval(() => {
+                statusLabel.innerText = `⚠️ Servidor lotado. Para proteger seus créditos, aguarde ${tempoRestante} segundos para tentar novamente...`;
+                statusLabel.className = "text-sm mt-2 font-semibold text-yellow-600 block bg-yellow-100 p-2 rounded";
+                tempoRestante--;
+
+                if (tempoRestante < 0) {
+                    clearInterval(timerContagem);
+                    bloqueioCreditosAtivo = false;
+                    if (pdfInput) pdfInput.disabled = false;
+                    statusLabel.innerText = "✅ Sistema liberado. Você já pode anexar o PDF novamente.";
+                    statusLabel.className = "text-sm mt-2 font-semibold text-green-600 block";
+                }
+            }, 1000);
         }
 
         async function testarChave() {
@@ -168,23 +301,32 @@
             status.classList.remove('hidden');
 
             try {
-                // Atualizado para o modelo 2.5 flash com base no painel do usuário
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Responda apenas com a palavra OK" }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Responda apenas OK" }] }] })
                 });
 
                 if(response.ok) {
-                    status.innerText = "✅ SUCESSO! A chave é válida e a IA 2.5 Flash está respondendo. Pode clicar em Salvar!";
+                    status.innerText = "✅ SUCESSO! A chave é válida. Clique em Salvar Chave.";
                     status.className = "text-sm text-green-400 mt-3 block font-bold";
                 } else {
                     const err = await response.json();
-                    status.innerText = `❌ ERRO: O Google bloqueou a chave. Detalhe: ${err.error?.message || "Chave Inválida"}`;
-                    status.className = "text-sm text-red-400 mt-3 block font-bold";
+                    const erroTraduzido = traduzirErroGoogle(err.error?.message || "Chave Inválida", response.status);
+                    
+                    if (erroTraduzido.includes("muita demanda")) {
+                        status.innerText = `⚠️ AVISO: ${erroTraduzido} Aguarde e teste de novo.`;
+                        status.className = "text-sm text-yellow-500 mt-3 block font-bold";
+                    } else if (erroTraduzido.includes("limite")) {
+                        status.innerText = `🚫 ${erroTraduzido}`;
+                        status.className = "text-sm text-red-500 mt-3 block font-bold";
+                    } else {
+                        status.innerText = `❌ ERRO: ${erroTraduzido}`;
+                        status.className = "text-sm text-red-400 mt-3 block font-bold";
+                    }
                 }
             } catch(e) {
-                status.innerText = `❌ ERRO DE REDE: ${e.message}`;
+                status.innerText = `❌ ERRO DE REDE: Verifique sua conexão com a internet.`;
                 status.className = "text-sm text-red-400 mt-3 block font-bold";
             }
         }
@@ -198,9 +340,7 @@
                 status.className = "text-sm text-green-400 mt-3 block font-bold";
                 status.classList.remove('hidden');
                 
-                setTimeout(() => {
-                    document.getElementById('apiConfigPanel').classList.add('hidden');
-                }, 2500);
+                setTimeout(() => { document.getElementById('apiConfigPanel').classList.add('hidden'); }, 2500);
             }
         }
 
@@ -213,14 +353,17 @@
             }
         };
 
-        function getApiKey() {
-            return localStorage.getItem('geminiApiKey');
-        }
+        function getApiKey() { return localStorage.getItem('geminiApiKey'); }
 
         // LÓGICA DE PDF E IA
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         async function lerPDF(event) {
+            if (bloqueioCreditosAtivo) {
+                event.target.value = ''; 
+                return; 
+            }
+
             const file = event.target.files[0];
             if(!file) return;
             
@@ -263,8 +406,17 @@
                 }
             } catch (error) {
                 console.error(error);
-                statusLabel.innerText = `❌ Falha: ${error.message}`;
-                statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
+                
+                if (error.message.includes("demanda")) {
+                    ativarTravaDeSeguranca('pdfStatus');
+                    statusLabel.classList.remove('hidden');
+                } else if (error.message.includes("limite")) {
+                    statusLabel.innerText = `🚫 ${error.message}`;
+                    statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block bg-red-100 p-2 rounded";
+                } else {
+                    statusLabel.innerText = `❌ Falha: ${error.message}`;
+                    statusLabel.className = "text-sm mt-2 font-semibold text-red-600 block";
+                }
             } finally {
                 aiLoading.classList.add('hidden');
                 event.target.value = ''; 
@@ -272,61 +424,67 @@
         }
 
         async function chamarInteligenciaArtificial(textoBruto, apiKey) {
-            // Atualizado para usar exclusivamente o Gemini 2.5 Flash
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-            
-            const prompt = `Extraia as peças de corte deste texto.
-            Retorne APENAS um array JSON válido. 
-            Formato OBRIGATÓRIO: [{"w": 1000, "h": 500, "qtd": 2}]
-            
-            Texto bruto:
-            ${textoBruto}`;
+            const prompt = `Extraia as peças de corte. Retorne APENAS um array JSON. Formato: [{"w": 1000, "h": 500, "qtd": 2}]\nTexto:\n${textoBruto}`;
 
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.1 }
-                })
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } })
             });
 
             if (!response.ok) {
                 const erroObj = await response.json();
-                throw new Error(erroObj.error?.message || "Erro na API do Google");
+                const erroTraduzido = traduzirErroGoogle(erroObj.error?.message || "Erro desconhecido", response.status);
+                throw new Error(erroTraduzido);
             }
 
             const data = await response.json();
             let textoResposta = data.candidates[0].content.parts[0].text;
-            
             const jsonStart = textoResposta.indexOf('[');
             const jsonEnd = textoResposta.lastIndexOf(']');
             
             if (jsonStart !== -1 && jsonEnd !== -1) {
-                textoResposta = textoResposta.substring(jsonStart, jsonEnd + 1);
-                return JSON.parse(textoResposta);
+                return JSON.parse(textoResposta.substring(jsonStart, jsonEnd + 1));
             } else {
-                throw new Error("A IA falhou em formatar a tabela.");
+                throw new Error("Formato inválido retornado pela IA.");
             }
         }
 
-        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS
+        // ==========================================
+        // ALGORITMO DE OTIMIZAÇÃO MAX RECTS (ATUALIZADO COM ROTAÇÃO)
+        // ==========================================
         class Packer {
             constructor(w, h) { this.root = { x: 0, y: 0, w: w, h: h }; }
-            fit(blocks) {
+            
+            fit(blocks, permitirRotacao) {
                 let node;
                 for (let n = 0; n < blocks.length; n++) {
                     let block = blocks[n];
+                    
+                    // Tenta encaixar no formato original (Largura x Altura)
                     if (node = this.findNode(this.root, block.w, block.h)) {
                         block.fit = this.splitNode(node, block.w, block.h);
+                        block.isRotated = false;
+                    } 
+                    // Se não couber E a rotação estiver permitida, tenta deitado (Altura x Largura)
+                    else if (permitirRotacao && (node = this.findNode(this.root, block.h, block.w))) {
+                        block.fit = this.splitNode(node, block.h, block.w);
+                        
+                        // Inverte fisicamente as medidas para o sistema desenhar deitado
+                        let tmpRealW = block.w_real; block.w_real = block.h_real; block.h_real = tmpRealW;
+                        let tmpW = block.w; block.w = block.h; block.h = tmpW;
+                        block.isRotated = true;
                     }
                 }
             }
+            
             findNode(root, w, h) {
                 if (root.used) return this.findNode(root.right, w, h) || this.findNode(root.down, w, h);
                 else if ((w <= root.w) && (h <= root.h)) return root;
                 else return null;
             }
+            
             splitNode(node, w, h) {
                 node.used = true;
                 node.down  = { x: node.x, y: node.y + h, w: node.w, h: node.h - h };
@@ -363,12 +521,29 @@
         async function processarOtimizacao() {
             const descLat = parseFloat(document.getElementById('descLat').value) || 0;
             const serra = parseFloat(document.getElementById('espSerra').value) || 0;
+            const espChapa = parseFloat(document.getElementById('espChapa').value) || 4;
+            const pesoM2 = parseFloat(document.getElementById('pesoM2').value) || 5.5;
+            const corChapa = document.getElementById('corChapa').value || "Não informada";
+            
+            // Lendo a nova configuração de rotação
+            const permitirRotacao = document.getElementById('permitirRotacao').checked;
+            
             const texto = document.getElementById('textoPecas').value;
 
             if(!texto.trim()) { alert("Nenhuma peça para calcular."); return; }
 
             const chapasDisp = getChapasDisponiveis(descLat);
             if(chapasDisp.length === 0) { alert("Informe pelo menos um tamanho de chapa."); return; }
+
+            // Populando os parâmetros no cabeçalho do relatório
+            document.getElementById('relCor').innerText = corChapa;
+            document.getElementById('relEsp').innerText = espChapa + " mm";
+            document.getElementById('relPesoRef').innerText = pesoM2 + " kg/m²";
+            document.getElementById('relRefile').innerText = descLat + " mm";
+            document.getElementById('relFresa').innerText = serra + " mm";
+            
+            document.getElementById('relGiro').innerText = permitirRotacao ? "SIM" : "NÃO";
+            document.getElementById('relGiro').className = permitirRotacao ? "font-bold text-green-600" : "font-bold text-red-600";
 
             document.getElementById('painelResultados').classList.add('hidden');
             const loadingContainer = document.getElementById('loadingContainer');
@@ -377,15 +552,21 @@
             const pecasBrutas = extrairPecasDaCaixa(texto);
             let blocks = [];
             let idCounter = 0;
+            
             let areaPecasLimpa = 0;
+            let totalQtdPecas = 0;
+            let corteLinearTotal = 0;
 
             pecasBrutas.forEach(p => {
                 for(let i=0; i < p.qtd; i++) {
                     blocks.push({ id: idCounter++, w: p.w + serra, h: p.h + serra, w_real: p.w, h_real: p.h });
                     areaPecasLimpa += (p.w * p.h);
+                    corteLinearTotal += ((p.w + p.h) * 2); 
+                    totalQtdPecas++;
                 }
             });
 
+            // Ordena as peças da maior para a menor (essencial para o aproveitamento)
             blocks.sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
 
             let chapasUsadas = [];
@@ -401,7 +582,9 @@
                 for (let chapa of chapasDisp) {
                     let packer = new Packer(chapa.w_util, chapa.h_util);
                     let blocosTeste = blocksRestantes.map(b => ({...b})); 
-                    packer.fit(blocosTeste);
+                    
+                    // Passa a permissão de rotação para o motor matemático
+                    packer.fit(blocosTeste, permitirRotacao);
                     let encaixados = blocosTeste.filter(b => b.fit);
                     
                     if (encaixados.length > 0) {
@@ -444,17 +627,46 @@
             chapasUsadas.forEach(uso => {
                 areaTotalComprada += uso.chapa.area_orig;
                 let nomeChapa = `${uso.chapa.w_orig} x ${uso.chapa.h_orig}`;
-                contagemChapas[nomeChapa] = (contagemChapas[nomeChapa] || 0) + 1;
+                
+                if(!contagemChapas[nomeChapa]) {
+                    contagemChapas[nomeChapa] = { qtd: 0, area_unitaria: uso.chapa.area_orig };
+                }
+                contagemChapas[nomeChapa].qtd += 1;
             });
 
-            const aproveitamento = (areaPecasLimpa / areaTotalComprada) * 100;
+            const areaPecasM2 = areaPecasLimpa / 1000000;
+            const areaCompradaM2 = areaTotalComprada / 1000000;
+            const corteLinearMetros = corteLinearTotal / 1000;
+            
+            const pesoPecasEstimado = areaPecasM2 * pesoM2;
+            const pesoChapasEstimado = areaCompradaM2 * pesoM2;
+            const pesoSobrasEstimado = pesoChapasEstimado - pesoPecasEstimado;
+
+            const aproveitamento = (areaPecasM2 / areaCompradaM2) * 100;
             const perda = 100 - aproveitamento;
 
             let htmlResumo = "";
-            for (const [tamanho, qtd] of Object.entries(contagemChapas)) { htmlResumo += `<div><span class="text-blue-600">${qtd}x</span> chapa(s) de ${tamanho}mm</div>`; }
+            for (const [tamanho, dados] of Object.entries(contagemChapas)) { 
+                let areaDesteTamanho = (dados.qtd * dados.area_unitaria) / 1000000;
+                htmlResumo += `
+                    <div class="flex justify-between items-center py-1 border-b border-blue-100 last:border-0">
+                        <div><span class="text-blue-700 font-bold">${dados.qtd}x</span> chapa(s) de ${tamanho}mm</div>
+                        <div class="text-sm text-gray-500 font-semibold">${areaDesteTamanho.toFixed(2)} m²</div>
+                    </div>`; 
+            }
 
             document.getElementById('painelResultados').classList.remove('hidden');
+            
+            document.getElementById('resQtdPecas').innerText = totalQtdPecas;
+            document.getElementById('resAreaPecas').innerText = areaPecasM2.toFixed(2) + " m²";
+            document.getElementById('resCorteLinear').innerText = corteLinearMetros.toFixed(1) + " m";
+            
+            document.getElementById('resPesoPecas').innerText = pesoPecasEstimado.toFixed(1) + " kg";
+            document.getElementById('resPesoChapas').innerText = pesoChapasEstimado.toFixed(1) + " kg";
+            document.getElementById('resPesoSobras').innerText = Math.max(0, pesoSobrasEstimado).toFixed(1) + " kg";
+            
             document.getElementById('resumoCompra').innerHTML = htmlResumo;
+            document.getElementById('resAreaComprada').innerText = areaCompradaM2.toFixed(2) + " m²";
             document.getElementById('resAprov').innerText = aproveitamento.toFixed(1) + "%";
             document.getElementById('resPerda').innerText = perda.toFixed(1) + "%";
 
@@ -497,7 +709,14 @@
                         ctx.fillStyle = '#3b82f6'; ctx.fillRect(x, y, p.w_real * escala, p.h_real * escala);
                         
                         if (p.w_real * escala > 30 && p.h_real * escala > 15) {
-                            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px Arial'; ctx.fillText(`${p.w_real}x${p.h_real}`, x + 5, y + 15);
+                            ctx.fillStyle = '#ffffff'; 
+                            ctx.font = 'bold 12px Arial'; 
+                            
+                            // Se a peça foi rotacionada, adiciona o indicador (R)
+                            let textoMedida = `${p.w_real}x${p.h_real}`;
+                            if (p.isRotated) { textoMedida += " (R)"; }
+                            
+                            ctx.fillText(textoMedida, x + 5, y + 15);
                         }
                     }
                 });
